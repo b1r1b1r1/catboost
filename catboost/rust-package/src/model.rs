@@ -1,11 +1,7 @@
 use crate::error::{CatBoostError, CatBoostResult};
-use crate::features::{
-    ObjectsOrderFeatures,
-    EmptyTextFeatures,
-    EmptyEmbeddingFeatures
-};
+use crate::features::{EmptyEmbeddingFeatures, EmptyTextFeatures, ObjectsOrderFeatures};
 use catboost_sys;
-use std::ffi::{CStr,CString};
+use std::ffi::{CStr, CString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
@@ -49,20 +45,20 @@ impl Model {
     fn set_or_check_object_count<
         TFeature,
         TObjectFeatures: AsRef<[TFeature]>,
-        TFeatures: AsRef<[TObjectFeatures]>
-    >
-    (
+        TFeatures: AsRef<[TObjectFeatures]>,
+    >(
         object_count: &mut Option<usize>,
-        features: &TFeatures
+        features: &TFeatures,
     ) -> CatBoostResult<()> {
         let features_array_size = features.as_ref().len();
         if features_array_size > 0 {
             match object_count {
                 Some(count) => {
                     if *count != features_array_size {
-                        return Err(
-                            CatBoostError{ description: "features arguments have different nonzero sizes".to_owned() }
-                        )
+                        return Err(CatBoostError {
+                            description: "features arguments have different nonzero sizes"
+                                .to_owned(),
+                        });
                     }
                 }
                 None => {
@@ -85,15 +81,15 @@ impl Model {
         TTextFeatures: AsRef<[TObjectTextFeatures]>,
         TEmbedding: AsRef<[f32]>,
         TObjectEmbeddingFeatures: AsRef<[TEmbedding]>,
-        TEmbeddingFeatures: AsRef<[TObjectEmbeddingFeatures]>
+        TEmbeddingFeatures: AsRef<[TObjectEmbeddingFeatures]>,
     >(
         &self,
         features: ObjectsOrderFeatures<
             TFloatFeatures,
             TCatFeatures,
             TTextFeatures,
-            TEmbeddingFeatures
-        >
+            TEmbeddingFeatures,
+        >,
     ) -> CatBoostResult<Vec<f64>> {
         let mut object_count = None;
         Self::set_or_check_object_count(&mut object_count, &features.float_features)?;
@@ -101,18 +97,20 @@ impl Model {
         Self::set_or_check_object_count(&mut object_count, &features.text_features)?;
         Self::set_or_check_object_count(&mut object_count, &features.embedding_features)?;
         if object_count.is_none() {
-            return Err(
-                CatBoostError{ description: "all features arguments are empty".to_owned() }
-            );
+            return Err(CatBoostError {
+                description: "all features arguments are empty".to_owned(),
+            });
         }
 
-        let mut float_features_ptr = features.float_features
+        let mut float_features_ptr = features
+            .float_features
             .as_ref()
             .iter()
             .map(|x| x.as_ref().as_ptr())
             .collect::<Vec<_>>();
 
-        let hashed_cat_features =  features.cat_features
+        let hashed_cat_features = features
+            .cat_features
             .as_ref()
             .iter()
             .map(|doc_cat_features| {
@@ -134,18 +132,17 @@ impl Model {
             .map(|x| x.as_ptr())
             .collect::<Vec<_>>();
 
-        let mut text_features_ptr_storage = features.text_features
+        let mut text_features_ptr_storage = features
+            .text_features
             .as_ref()
             .iter()
-            .map(
-                |object_text_features|
-                    object_text_features.as_ref()
-                        .iter()
-                        .map(|text|
-                            text.as_ref().as_ptr()
-                        )
-                        .collect::<Vec<_>>()
-            )
+            .map(|object_text_features| {
+                object_text_features
+                    .as_ref()
+                    .iter()
+                    .map(|text| text.as_ref().as_ptr())
+                    .collect::<Vec<_>>()
+            })
             .collect::<Vec<_>>();
 
         let mut text_features_ptr = text_features_ptr_storage
@@ -154,25 +151,26 @@ impl Model {
             .collect::<Vec<_>>();
 
         let mut embedding_dimensions = if features.embedding_features.as_ref().len() > 0 {
-            features.embedding_features.as_ref()[0].as_ref().iter()
+            features.embedding_features.as_ref()[0]
+                .as_ref()
+                .iter()
                 .map(|x| x.as_ref().len())
                 .collect::<Vec<_>>()
         } else {
             vec![]
         };
 
-        let mut embedding_features_ptr_storage = features.embedding_features
+        let mut embedding_features_ptr_storage = features
+            .embedding_features
             .as_ref()
             .iter()
-            .map(
-                |object_embeddings|
-                    object_embeddings.as_ref()
-                        .iter()
-                        .map(|embedding|
-                            embedding.as_ref().as_ptr()
-                        )
-                        .collect::<Vec<_>>()
-            )
+            .map(|object_embeddings| {
+                object_embeddings
+                    .as_ref()
+                    .iter()
+                    .map(|embedding| embedding.as_ref().as_ptr())
+                    .collect::<Vec<_>>()
+            })
             .collect::<Vec<_>>();
 
         let mut embedding_features_ptr = embedding_features_ptr_storage
@@ -186,11 +184,23 @@ impl Model {
                 self.handle,
                 object_count.unwrap(),
                 float_features_ptr.as_mut_ptr(),
-                if features.float_features.as_ref().is_empty() { 0 } else { features.float_features.as_ref()[0].as_ref().len() },
+                if features.float_features.as_ref().is_empty() {
+                    0
+                } else {
+                    features.float_features.as_ref()[0].as_ref().len()
+                },
                 hashed_cat_features_ptr.as_mut_ptr(),
-                if features.cat_features.as_ref().is_empty() { 0 } else { features.cat_features.as_ref()[0].as_ref().len() },
+                if features.cat_features.as_ref().is_empty() {
+                    0
+                } else {
+                    features.cat_features.as_ref()[0].as_ref().len()
+                },
                 text_features_ptr.as_mut_ptr(),
-                if features.text_features.as_ref().is_empty() { 0 } else { features.text_features.as_ref()[0].as_ref().len() },
+                if features.text_features.as_ref().is_empty() {
+                    0
+                } else {
+                    features.text_features.as_ref()[0].as_ref().len()
+                },
                 embedding_features_ptr.as_mut_ptr(),
                 embedding_dimensions.as_mut_ptr(),
                 embedding_dimensions.len(),
@@ -207,21 +217,18 @@ impl Model {
         TFloatFeatures: AsRef<[TFloatFeature]>,
         TString: AsRef<str>,
         TCatFeature: AsRef<[TString]>,
-        TCatFeatures: AsRef<[TCatFeature]>
-    >
-    (
+        TCatFeatures: AsRef<[TCatFeature]>,
+    >(
         &self,
         float_features: TFloatFeatures,
         cat_features: TCatFeatures,
     ) -> CatBoostResult<Vec<f64>> {
-        self.predict(
-            ObjectsOrderFeatures{
-                float_features: float_features,
-                cat_features: cat_features,
-                text_features: EmptyTextFeatures{},
-                embedding_features: EmptyEmbeddingFeatures{}
-            }
-        )
+        self.predict(ObjectsOrderFeatures {
+            float_features: float_features,
+            cat_features: cat_features,
+            text_features: EmptyTextFeatures {},
+            embedding_features: EmptyEmbeddingFeatures {},
+        })
     }
 
     /// Get expected float feature count for model
@@ -255,7 +262,9 @@ impl Model {
     }
 
     pub fn enable_gpu_evaluation(&self) -> CatBoostResult<()> {
-        CatBoostError::check_return_value( unsafe { catboost_sys::EnableGPUEvaluation(self.handle, 0) } )
+        CatBoostError::check_return_value(unsafe {
+            catboost_sys::EnableGPUEvaluation(self.handle, 0)
+        })
     }
 }
 
@@ -306,16 +315,8 @@ mod tests {
 
         let prediction = model
             .calc_model_prediction(
-                &[
-                    [-10.0, 5.0, 753.0],
-                    [30.0, 1.0, 760.0],
-                    [40.0, 0.1, 705.0],
-                ],
-                &[
-                    ["north"],
-                    ["south"],
-                    ["south"],
-                ],
+                &[[-10.0, 5.0, 753.0], [30.0, 1.0, 760.0], [40.0, 0.1, 705.0]],
+                &[["north"], ["south"], ["south"]],
             )
             .unwrap();
 
@@ -328,22 +329,23 @@ mod tests {
     #[should_panic]
     fn calc_prediction_object_size_mismatch() {
         let model = Model::load("tmp/model.bin").unwrap();
-        model.calc_model_prediction(
-            vec![
-                vec![-10.0, 5.0, 753.0],
-                vec![30.0, 1.0, 760.0],
-                vec![40.0, 0.1, 705.0],
-            ],
-            vec![
-                vec![String::from("north")],
-                vec![String::from("south")],
-            ],
-        )
-        .unwrap();
+        model
+            .calc_model_prediction(
+                vec![
+                    vec![-10.0, 5.0, 753.0],
+                    vec![30.0, 1.0, 760.0],
+                    vec![40.0, 0.1, 705.0],
+                ],
+                vec![vec![String::from("north")], vec![String::from("south")]],
+            )
+            .unwrap();
     }
 
     fn split_string_with_floats(features: &str, delim: char) -> Vec<f32> {
-        features.split(delim).map(|e| e.parse::<f32>().unwrap() ).collect::<Vec<_>>()
+        features
+            .split(delim)
+            .map(|e| e.parse::<f32>().unwrap())
+            .collect::<Vec<_>>()
     }
 
     fn get_num_features(features: &str) -> Vec<f32> {
@@ -355,7 +357,10 @@ mod tests {
     }
 
     fn get_text_features(features: &[&str]) -> Vec<CString> {
-        features.iter().map(|s| CString::new(*s).unwrap() ).collect::<Vec<_>>()
+        features
+            .iter()
+            .map(|s| CString::new(*s).unwrap())
+            .collect::<Vec<_>>()
     }
 
     fn get_embeddings(features: &str) -> Vec<f32> {
@@ -363,7 +368,8 @@ mod tests {
     }
 
     fn test_predict_model_with_num_features(on_gpu: bool) {
-        let model = Model::load("../pytest/data/models/features_num__dataset_querywise.cbm").unwrap();
+        let model =
+            Model::load("../pytest/data/models/features_num__dataset_querywise.cbm").unwrap();
 
         if on_gpu {
             model.enable_gpu_evaluation().unwrap()
@@ -393,59 +399,71 @@ mod tests {
             0.08819508860736715,
             0.043193651033534904,
             -0.0019333444540111586,
-            0.0836685835428004
+            0.0836685835428004,
         ];
-        assert!( std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(l, r, epsilon=1.0e-6)) )
-
+        assert!(
+            std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(
+                l,
+                r,
+                epsilon = 1.0e-6
+            ))
+        )
     }
 
     fn test_predict_model_with_num_cat_features(on_gpu: bool) {
-        let model = Model::load("../pytest/data/models/features_num_cat__dataset_adult.cbm").unwrap();
+        let model =
+            Model::load("../pytest/data/models/features_num_cat__dataset_adult.cbm").unwrap();
 
         if on_gpu {
             model.enable_gpu_evaluation().unwrap()
         }
 
-        let prediction = model.predict(
-            ObjectsOrderFeatures::new()
-                .with_float_features(
-                    &[
+        let prediction = model
+            .predict(
+                ObjectsOrderFeatures::new()
+                    .with_float_features(&[
                         get_num_features("44.0	403782.0	11.0	0.0	0.0	45.0"),
                         get_num_features("19.0	208874.0	10.0	0.0	0.0	40.0"),
                         get_num_features("27.0	158647.0	10.0	0.0	0.0	40.0"),
-                        get_num_features("18.0	115258.0	6.0	0.0	0.0	40.0")
-                    ]
-                )
-                .with_cat_features(
-                    &[
+                        get_num_features("18.0	115258.0	6.0	0.0	0.0	40.0"),
+                    ])
+                    .with_cat_features(&[
                         get_categ_features(
-                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States"
+                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States",
                         ),
                         get_categ_features(
-                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States"
+                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States",
                         ),
                         get_categ_features(
-                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States"
+                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States",
                         ),
                         get_categ_features(
-                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States"
-                        )
-                    ]
-                )
-        ).unwrap();
+                            "0	n	1	Private	Assoc-voc	Divorced	Sales	Not-in-family	White	Male	United-States",
+                        ),
+                    ]),
+            )
+            .unwrap();
 
         let expected_prediction = [
             0.9876043724015489,
             0.9869589576174197,
             0.997648058191363,
-            1.0147797830459155
+            1.0147797830459155,
         ];
-        assert!( std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(l, r, epsilon=1.0e-6)) )
-
+        assert!(
+            std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(
+                l,
+                r,
+                epsilon = 1.0e-6
+            ))
+        )
     }
 
     fn test_predict_model_with_num_cat_text_features(on_gpu: bool) {
-        let model = Model::load("../pytest/data/models/features_num_cat_text__dataset_rotten_tomatoes__binclass.cbm").unwrap();
+        let model = Model::load(
+            "../pytest/data/models/features_num_cat_text__dataset_rotten_tomatoes__binclass.cbm",
+        )
+        .unwrap();
 
         if on_gpu {
             model.enable_gpu_evaluation().unwrap()
@@ -524,15 +542,15 @@ mod tests {
                 )
         ).unwrap();
 
-        let expected_prediction = [
-            3.225051356124634,
-            -3.525299913259707,
-            -3.2694112073224884
-        ];
-        assert!( std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(l, r, epsilon=1.0e-6)) )
-
+        let expected_prediction = [3.225051356124634, -3.525299913259707, -3.2694112073224884];
+        assert!(
+            std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(
+                l,
+                r,
+                epsilon = 1.0e-6
+            ))
+        )
     }
-
 
     fn test_predict_model_with_num_cat_text_embedding_features(on_gpu: bool) {
         let model = Model::load("../pytest/data/models/features_num_cat_text_emb__dataset_rotten_tomatoes__binclass.cbm").unwrap();
@@ -651,13 +669,14 @@ mod tests {
                 )
         ).unwrap();
 
-        let expected_prediction = [
-            1.3269404077325404,
-            -1.7375772811362642,
-            -2.0048052240456595
-        ];
-        assert!( std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(l, r, epsilon=1.0e-6)) )
-
+        let expected_prediction = [1.3269404077325404, -1.7375772811362642, -2.0048052240456595];
+        assert!(
+            std::iter::zip(expected_prediction, prediction).all(|(l, r)| abs_diff_eq!(
+                l,
+                r,
+                epsilon = 1.0e-6
+            ))
+        )
     }
 
     #[test]

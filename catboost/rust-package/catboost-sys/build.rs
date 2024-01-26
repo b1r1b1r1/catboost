@@ -5,24 +5,19 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
-    let target = env::var("TARGET").unwrap();
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let debug = env::var("DEBUG").unwrap();
     let cb_model_interface_root = Path::new("../../libs/model_interface/")
         .canonicalize()
         .unwrap();
 
+    #[allow(unused_mut)]
     let mut build_native_args = vec![
         "--targets",
-        "catboostmodel",
+        "catboostmodel_static",
         "--build-root-dir",
         out_dir.to_str().unwrap(),
+        "--build-type=Release",
     ];
-    if debug == "true" {
-        build_native_args.push("--build-type=Debug");
-    } else {
-        build_native_args.push("--build-type=Release");
-    }
 
     #[cfg(feature = "gpu")]
     build_native_args.push("--have-cuda");
@@ -52,13 +47,9 @@ fn main() {
 
     println!(
         "cargo:rustc-link-search={}",
-        out_dir.join("catboost/libs/model_interface").display()
+        out_dir.join("catboost/libs/model_interface/static").display()
     );
-
-    if target.contains("apple") {
-        println!("cargo:rustc-link-lib=c++");
-    } else {
-        println!("cargo:rustc-link-lib=stdc++");
-    }
-    println!("cargo:rustc-link-lib=dylib=catboostmodel");
+    
+    println!("cargo:rustc-link-lib=static=catboostmodel_static");
+    println!("cargo:rustc-link-lib=static=catboostmodel_static.global");
 }
