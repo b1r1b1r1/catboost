@@ -44,6 +44,10 @@ else()
   string(APPEND _GNU_COMMON_C_CXX_FLAGS " -D_FILE_OFFSET_BITS=64")
 endif()
 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm.*|aarch64)")
+  string(APPEND _GNU_COMMON_C_CXX_FLAGS " -mno-outline-atomics")
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm.*|aarch64|ppc64le)")
   string(APPEND _GNU_COMMON_C_CXX_FLAGS " -fsigned-char")
 endif()
