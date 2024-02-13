@@ -45,6 +45,12 @@ fn main() {
         .write_to_file(out_dir.join("bindings.rs"))
         .expect("Couldn't write bindings.");
 
+    if target.contains("apple") {
+        println!("cargo:rustc-link-lib=c++");
+    } else {
+        println!("cargo:rustc-link-lib=stdc++");
+    }
+
     println!(
         "cargo:rustc-link-search={}",
         out_dir.join("catboost/libs/model_interface/static").display()
